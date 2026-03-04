@@ -40,3 +40,5 @@ export const data = [
       ans: 2,
     },
   ];
+  //https://opentdb.com/api.php?amount=20&category=9&type=multiple 
+  //You'll use this url to fetch data for your quiz later...
