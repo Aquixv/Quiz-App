@@ -1,80 +1,177 @@
-import React, { useRef, useState } from 'react'
-import './Quiz.css'
-import { data } from './data'
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import './Quiz.css';
+import Higuruma from '../assets/Higuruma.png'
+import Hesnotreading from '../assets/Not-reading.png'
+import Regret from '../assets/Regret.png'
+import doesheknow from '../assets/doesheknow.png'
+import speed from '../assets/speed.jpg'
 
-const Quiz = () => {
-    let [index, setIndex] = useState(0)
-    let [question, setQuestion] = useState(data[index]);
-    let [lock, setLock] = useState(false)
-    let [score, setScore] = useState(0)
-    let [result, setResult] = useState(false);
+const Quiz = ({ category, amount, difficulty }) => {
+    const navigate = useNavigate();
+    const [index, setIndex] = useState(() => {
+    const saved = localStorage.getItem('active_quiz');
+    return saved ? JSON.parse(saved).index : 0;
+});
+    const [data, setData] = useState(() => {
+    const saved = localStorage.getItem('active_quiz');
+    return saved ? JSON.parse(saved).data : [];
+});
+    const [lock, setLock] = useState(false);
+    const [score, setScore] = useState(0);
+    const [result, setResult] = useState(false);
+    const [loading, setLoading] = useState(true);
 
-    let Option1 = useRef(null)
-    let Option2 = useRef(null)
-    let Option3 = useRef(null)
-    let Option4 = useRef(null)
+    const Option1 = useRef(null);
+    const Option2 = useRef(null);
+    const Option3 = useRef(null);
+    const Option4 = useRef(null);
+    const option_array = [Option1, Option2, Option3, Option4];
 
-    let option_array = [Option1, Option2, Option3, Option4]
+    useEffect(() => {
+    // 1. If we are already loading or have data, don't fetch again
+    if (data.length > 0) return; 
 
-    const checkAnswers = (e, ans) => {
-      if(lock === false){
-      if(question.ans === ans){
-        e.target.classList.add("correct")
-        setLock(true);
-        setScore(prev => prev+1);
+    let isMounted = true;
+    const url = `https://opentdb.com/api.php?amount=${amount}&category=${category}${difficulty ? `&difficulty=${difficulty}` : ''}&type=multiple`;
+
+    // 2. Add a slight delay if you want to be extra safe
+    const timer = setTimeout(() => {
+        fetch(url)
+            .then(res => {
+                if (res.status === 429) throw new Error("Rate Limited");
+                return res.json();
+            })
+            .then(resData => {
+                if (isMounted && resData?.results) {
+                    const formatted = resData.results.map(q => ({
+                        ...q,
+                        answers: [...q.incorrect_answers, q.correct_answer].sort(() => Math.random() - 0.5)
+                    }));
+                    setData(formatted);
+                    setLoading(false);
+                }
+            })
+            .catch(err => console.log("API is chilling, wait 5 seconds..."));
+    }, 1000); // Waits 1 second before firing
+
+    return () => {
+        isMounted = false;
+        clearTimeout(timer);
+    }; 
+}, [amount, category, difficulty, data.length]);
+useEffect(() => {
+    if (data.length > 0) {
+        const quizState = {
+            data,
+            index,
+            score,
+            quizSettings: { amount, category, difficulty }
+        };
+        localStorage.setItem('active_quiz', JSON.stringify(quizState));
     }
-    else{
-        e.target.classList.add("incorrect")
-        setLock(true);
-        option_array[question.ans-1].current.classList.add("correct")
+}, [index, score, data, amount, category, difficulty]);
+
+useEffect(() => {
+    if (result) {
+        localStorage.removeItem('active_quiz');
     }
-      }
-    }
+}, [result]);
+    const decodeHTML = (html) => {
+        const txt = document.createElement("textarea");
+        txt.innerHTML = html;
+        return txt.value;
+    };
+
+      const getFeedback = () => {
+  const percentage = (score / data.length) * 100;
+  
+  if (percentage === 100) return { msg: "Ts won't take you to heaven btw", 
+    color: "#00d397", 
+    gif: doesheknow};
+  if (percentage >= 80) return { msg: "You're not him", 
+    color: "#ff4a4a", 
+    gif: Regret};
+  if (percentage >= 50) return { msg: '', 
+    color: "#553f9a", 
+    gif: Higuruma};
+  if (percentage === 0) return { msg: "Did you even read?", 
+    color: "#ff4a4a", 
+    gif: Hesnotreading};
+  return { msg: "Time to Hit the Books... 📚", 
+    color: "#ff4a4a", 
+    gif: speed};
+};
+    if (loading) return <div className='container'><h2>Loading Questions...</h2></div>;
+
+    const currentQuestion = data[index];
+    const feedback = getFeedback();
+
+    const checkAnswer = (e, ans) => {
+        if (!lock) {
+            if (currentQuestion.correct_answer === ans) {
+                e.target.classList.add("correct");
+                setScore(prev => prev + 1);
+            } else {
+                e.target.classList.add("incorrect");
+                option_array.forEach(opt => {
+                    if (opt.current.innerText === decodeHTML(currentQuestion.correct_answer)) {
+                        opt.current.classList.add("correct");
+                    }
+                });
+            }
+            setLock(true);
+        }
+    };
+
     const next = () => {
-    if(lock === true) {
-      if (index === data.length-1) {
-        setResult(true);
-        return 0;
-      }
-     setIndex(++index)
-    setQuestion(data[index])
-    setLock(false);
-    option_array.map((option) => {
-      option.current.classList.remove("incorrect")
-      option.current.classList.remove("correct")
-      return null;
-    })
-    }
-    }
-    const reset = () => {
-    setIndex(0);
-    setQuestion(data[0]);
-    setScore(0)
-    setLock(false);
-    setResult(false);
-    } 
-  return (
-    <div className='container'>
-    <h1>A Quiz App</h1>
-    <hr />
-    {result? <></>:
-    <>
-    <h2>{index+1}. {question.question}</h2>
-    <ul>
-    <li ref={Option1} onClick={(e)=>{checkAnswers(e,1)}}>{question.option1}</li>
-    <li ref={Option2} onClick={(e)=>{checkAnswers(e,2)}}>{question.option2}</li>
-    <li ref={Option3} onClick={(e)=>{checkAnswers(e,3)}}>{question.option3}</li>
-    <li ref={Option4} onClick={(e)=>{checkAnswers(e,4)}}>{question.option4}</li>
-    </ul>
-    <button onClick={next}>Next</button>
-    <div className="index">{index+1} of {data.length} questions</div>
-    </>}
-    {result? <><h2>You Scored {score} out of {data.length}</h2>
-    <button onClick={reset}>Reset</button>
-    </>:<></>}
-    
-    </div>
-  )
-}
+        if (lock) {
+            if (index === data.length - 1) {
+                setResult(true);
+                return;
+            }
+            setIndex(prev => prev + 1);
+            setLock(false);
+            option_array.forEach(opt => opt.current && opt.current.classList.remove("correct", "incorrect"));
+        }
+    };
 
-export default Quiz
+    const reset = () => {
+        setIndex(0);
+        setScore(0);
+        setLock(false);
+        setResult(false);
+    };
+
+    return (
+        <div className='container'>
+            {result ? (
+                <div className="result-container">
+                    <img src={feedback.gif} alt="My personal reaction" className="result-gif" />
+                    <h2 style={{ color: feedback.color }}>{feedback.msg}</h2>
+                    <h3>You scored {score} out of {data.length}</h3>
+                    <div className='result-buttons'>
+                    <button onClick={reset}>Retake?</button>
+                    <button onClick={() => navigate('/setup')}>New Quiz?</button>
+                    <button onClick={() => navigate('/')}>Home</button>
+                    </div>
+                </div>
+            ) : (
+                <>
+                    <h2>{index + 1}. {decodeHTML(currentQuestion.question)}</h2>
+                    <ul>
+                        {currentQuestion.answers.map((ans, i) => (
+                            <li key={i} ref={option_array[i]} onClick={(e) => checkAnswer(e, decodeHTML(ans))}>
+                                {decodeHTML(ans)}
+                            </li>
+                        ))}
+                    </ul>
+                    <button onClick={next}>Next</button>
+                    <div className="index">{index + 1} of {data.length} questions</div>
+                </>
+            )}
+        </div>
+    );
+};
+
+export default Quiz;
