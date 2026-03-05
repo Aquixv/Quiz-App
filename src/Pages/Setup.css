@@ -1,0 +1,23 @@
+.setup-card {
+    background: rgba(255, 255, 255, 0.2); /* Semi-transparent */
+    backdrop-filter: blur(15px); /* The "Glass" effect */
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+
+.settings-group p {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #4A148C;
+}
+
+.category-select, .settings-group input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    margin-bottom: 20px;
+    outline: none;
+}
