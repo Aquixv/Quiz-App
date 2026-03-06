@@ -21,6 +21,14 @@ const Quiz = ({ category, amount, difficulty }) => {
     const [score, setScore] = useState(0);
     const [result, setResult] = useState(false);
     const [loading, setLoading] = useState(true);
+    
+    const [quizSettings, setQuizSettings] = useState(() => {
+    const saved = localStorage.getItem('active_quiz');
+    if (saved) {
+        return JSON.parse(saved).quizSettings;
+    }
+    return { amount: 10, category: 9, difficulty: 'easy' };
+});
 
     const Option1 = useRef(null);
     const Option2 = useRef(null);
@@ -29,13 +37,15 @@ const Quiz = ({ category, amount, difficulty }) => {
     const option_array = [Option1, Option2, Option3, Option4];
 
     useEffect(() => {
-    // 1. If we are already loading or have data, don't fetch again
-    if (data.length > 0) return; 
+    // If we already have data (from localStorage), just stop loading and don't fetch!
+    if (data.length > 0) {
+        setLoading(false);
+        return; 
+    }
 
     let isMounted = true;
     const url = `https://opentdb.com/api.php?amount=${amount}&category=${category}${difficulty ? `&difficulty=${difficulty}` : ''}&type=multiple`;
 
-    // 2. Add a slight delay if you want to be extra safe
     const timer = setTimeout(() => {
         fetch(url)
             .then(res => {
@@ -52,8 +62,8 @@ const Quiz = ({ category, amount, difficulty }) => {
                     setLoading(false);
                 }
             })
-            .catch(err => console.log("API is chilling, wait 5 seconds..."));
-    }, 1000); // Waits 1 second before firing
+            .catch(err => console.log("API is chilling..."));
+    }, 1000);
 
     return () => {
         isMounted = false;
