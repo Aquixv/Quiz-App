@@ -52,7 +52,7 @@ const Setup = ({ setQuizSettings }) => {
       </div>
 
       <div className='settings-group'>
-        <p>Select Category</p> {/* Fixed label here */}
+        <p>Select Category</p> 
         <select name="category" className="category-select" onChange={handleChange}>
           {categories.map((cat) => (
             <option key={cat.id} value={cat.id}>{cat.name}</option>
